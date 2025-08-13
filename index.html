@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>레스토랑 주문/주방 앱</title>
+    <!-- Inter 폰트와 Tailwind CSS CDN을 로드합니다 -->
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* 주문 접수 알림을 위한 애니메이션 */
+        .alert-enter {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .alert-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        .alert-exit {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .alert-exit-active {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-in, transform 0.3s ease-in;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- 메인 컨테이너 -->
+    <div class="container mx-auto p-4 max-w-2xl min-h-screen flex flex-col">
+
+        <!-- 앱 헤더 및 탭 메뉴 -->
+        <header class="bg-white rounded-xl shadow-lg p-5 mb-5 sticky top-0 z-10">
+            <h1 class="text-3xl font-bold text-center mb-4">한마음 면옥 주문 앱</h1>
+            <nav class="flex justify-around items-center space-x-2">
+                <button id="order-tab" class="flex-1 py-4 px-6 text-center text-lg font-medium rounded-lg bg-indigo-500 text-white shadow-lg transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    주문 바구니
+                </button>
+                <button id="history-tab" class="flex-1 py-4 px-6 text-center text-lg font-medium rounded-lg bg-gray-200 text-gray-700 shadow-md transition hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                    주문 내역
+                </button>
+                <button id="kitchen-tab" class="flex-1 py-4 px-6 text-center text-lg font-medium rounded-lg bg-gray-200 text-gray-700 shadow-md transition hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                    주방 화면
+                </button>
+            </nav>
+        </header>
+
+        <!-- 주문 접수 화면 -->
+        <main id="order-view" class="flex-1 space-y-5">
+            <!-- 테이블 번호 선택 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-semibold mb-4">테이블 번호 선택</h2>
+                <select id="table-number-select" class="w-full p-3 border rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">-- 테이블을 선택하세요 --</option>
+                    <!-- 테이블 번호 옵션이 여기에 동적으로 추가됩니다 -->
+                </select>
+            </div>
+            
+            <!-- 메뉴 목록 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-semibold mb-4">메뉴 목록</h2>
+                <div id="menu-list" class="grid grid-cols-2 gap-4">
+                    <!-- 메뉴 항목이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+
+            <button id="submit-order-btn" class="w-full py-4 rounded-lg bg-green-500 text-white text-xl font-bold shadow-md hover:bg-green-600 transition">
+                주문 접수
+            </button>
+
+            <!-- 현재 주문 목록 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-semibold mb-4">현재 주문</h2>
+                <div id="current-order-list" class="space-y-3">
+                    <!-- 주문 항목이 여기에 동적으로 추가됩니다 -->
+                </div>
+                <div id="no-order-message" class="text-center text-xl text-gray-500 italic mt-4" style="display: none;">주문 항목을 추가해 주세요.</div>
+            </div>
+        </main>
+
+        <!-- 주방 화면 -->
+        <main id="kitchen-view" class="flex-1 space-y-5 hidden">
+            <!-- 주문 목록 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-semibold mb-4">접수된 주문 목록</h2>
+                <div id="kitchen-order-list" class="space-y-5">
+                    <!-- 주방 주문 목록이 여기에 동적으로 추가됩니다 -->
+                </div>
+                <div id="no-kitchen-orders" class="text-center text-xl text-gray-500 italic mt-4" style="display: none;">접수된 주문이 없습니다.</div>
+            </div>
+        </main>
+
+        <!-- 주문 내역 화면 -->
+        <main id="history-view" class="flex-1 space-y-5 hidden">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-semibold mb-4">전체 주문 내역</h2>
+                <div id="order-history-list" class="space-y-5">
+                    <!-- 주문 내역이 여기에 동적으로 추가됩니다 -->
+                </div>
+                <div id="no-history-orders" class="text-center text-xl text-gray-500 italic mt-4" style="display: none;">주문 내역이 없습니다.</div>
+            </div>
+        </main>
+
+        <!-- 주문 접수 알림 메시지 (Toast) -->
+        <div id="alert-message" class="fixed bottom-4 right-4 p-5 rounded-lg bg-indigo-600 text-white text-lg shadow-xl transition-all duration-300 alert-enter hidden">
+            주문이 접수되었습니다. 3분 이내에 수정할 수 있습니다.
+        </div>
+    </div>
+
+    <script>
+        // 주문 데이터를 저장할 배열과 현재 주문을 위한 객체
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        let currentOrder = {};
+        let editingOrderId = null; // 수정 중인 주문의 ID를 저장합니다.
+        
+        // 메뉴 목록 정의 (사진 기반으로 업데이트)
+        const menuItems = [
+            { id: 'menu-1', name: '물냉면', price: 11000 },
+            { id: 'menu-2', name: '비빔냉면', price: 11000 },
+            { id: 'menu-3', name: '돼지갈비', price: 16000 },
+            { id: 'menu-4', name: '김치비빔', price: 25000 },
+            { id: 'menu-5', name: '불고기', price: 17000 },
+            { id: 'menu-6', name: '갈비탕', price: 13000 },
+            { id: 'menu-7', name: '접시만두', price: 9000 },
+            { id: 'menu-8', name: '만두국', price: 10000 },
+            { id: 'menu-9', name: '사리', price: 2000 },
+            // 사진에 있는 메뉴 추가
+            { id: 'menu-10', name: '당면사리', price: 2000 },
+            { id: 'menu-11', name: '된장찌게', price: 2000 },
+            { id: 'menu-12', name: '소주/맥주', price: 5000 },
+            { id: 'menu-13', name: '막걸리', price: 4000 },
+            { id: 'menu-14', name: '백세주', price: 9000 },
+            { id: 'menu-15', name: '음료수', price: 2000 },
+        ];
+
+        // 테이블 번호 목록 정의
+        const tableNumbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+
+        // DOM 요소들을 가져옵니다
+        const orderTab = document.getElementById('order-tab');
+        const kitchenTab = document.getElementById('kitchen-tab');
+        const historyTab = document.getElementById('history-tab');
+        const orderView = document.getElementById('order-view');
+        const kitchenView = document.getElementById('kitchen-view');
+        const historyView = document.getElementById('history-view');
+        const menuList = document.getElementById('menu-list');
+        const currentOrderList = document.getElementById('current-order-list');
+        const noOrderMessage = document.getElementById('no-order-message');
+        const submitOrderBtn = document.getElementById('submit-order-btn');
+        const kitchenOrderList = document.getElementById('kitchen-order-list');
+        const noKitchenOrders = document.getElementById('no-kitchen-orders');
+        const orderHistoryList = document.getElementById('order-history-list');
+        const noHistoryOrders = document.getElementById('no-history-orders');
+        const tableNumberSelect = document.getElementById('table-number-select');
+        const alertMessage = document.getElementById('alert-message');
+
+        // 탭 활성화 상태를 업데이트하는 함수
+        function setActiveTab(tabId) {
+            // 모든 탭의 스타일 초기화
+            [orderTab, historyTab, kitchenTab].forEach(tab => {
+                tab.classList.remove('bg-indigo-500', 'text-white', 'shadow-lg');
+                tab.classList.add('bg-gray-200', 'text-gray-700', 'shadow-md');
+            });
+            // 선택된 탭 활성화
+            document.getElementById(tabId).classList.add('bg-indigo-500', 'text-white', 'shadow-lg');
+            document.getElementById(tabId).classList.remove('bg-gray-200', 'text-gray-700', 'shadow-md');
+            
+            // 모든 뷰 숨기기
+            [orderView, kitchenView, historyView].forEach(view => view.classList.add('hidden'));
+            
+            // 선택된 뷰 표시
+            if (tabId === 'order-tab') {
+                orderView.classList.remove('hidden');
+                renderCurrentOrder();
+            } else if (tabId === 'history-tab') {
+                historyView.classList.remove('hidden');
+                renderOrderHistory();
+            } else if (tabId === 'kitchen-tab') {
+                kitchenView.classList.remove('hidden');
+                renderKitchenOrders();
+            }
+        }
+
+        // 메뉴 목록을 화면에 렌더링하는 함수
+        function renderMenus() {
+            menuList.innerHTML = menuItems.map(item => {
+                let optionsHtml = '';
+                // options 속성이 있는 메뉴에만 드롭다운을 추가합니다
+                if (item.options) {
+                    optionsHtml = `
+                        <select id="option-${item.id}" class="mt-2 w-full p-1 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            ${item.options.map(option => `<option value="${option}">${option}</option>`).join('')}
+                        </select>
+                    `;
+                }
+                return `
+                    <div class="bg-gray-100 p-4 rounded-lg flex flex-col justify-between items-center text-center shadow-sm">
+                        <span class="text-sm font-semibold">${item.name}</span>
+                        <span class="text-xs text-gray-500">${item.price.toLocaleString()}원</span>
+                        ${optionsHtml}
+                        <button onclick="addToCurrentOrder('${item.name}', '${item.id}')" class="mt-3 w-10 h-10 flex items-center justify-center rounded-full bg-indigo-400 text-white hover:bg-indigo-500 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 현재 주문에 항목을 추가하는 함수
+        function addToCurrentOrder(itemName, itemId) {
+            let key = itemName;
+            // itemId를 통해 드롭다운 선택값을 가져와 key에 추가합니다
+            const menu = menuItems.find(item => item.id === itemId);
+            if (menu && menu.options) {
+                const option = document.getElementById(`option-${itemId}`).value;
+                key = `${itemName} (${option})`;
+            }
+
+            if (currentOrder[key]) {
+                currentOrder[key]++;
+            } else {
+                currentOrder[key] = 1;
+            }
+            renderCurrentOrder();
+        }
+
+        // 현재 주문 목록을 화면에 렌더링하는 함수
+        function renderCurrentOrder() {
+            const orderItems = Object.entries(currentOrder);
+            currentOrderList.innerHTML = orderItems.map(([key, count]) => {
+                const [name, option] = key.split(' (');
+                const optionText = option ? `(${option}` : '';
+                return `
+                    <div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg shadow-sm">
+                        <span class="font-medium">${name} ${optionText}</span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="changeOrderItemCount('${key}', -1)" class="w-8 h-8 flex items-center justify-center rounded-full bg-red-400 text-white hover:bg-red-500 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                            <span class="font-bold w-6 text-center">${count}</span>
+                            <button onclick="changeOrderItemCount('${key}', 1)" class="w-8 h-8 flex items-center justify-center rounded-full bg-green-400 text-white hover:bg-green-500 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            noOrderMessage.style.display = orderItems.length === 0 ? 'block' : 'none';
+            // 주문 수정/접수 버튼 텍스트 변경
+            submitOrderBtn.innerText = editingOrderId ? '주문 수정' : '주문 접수';
+        }
+
+        // 현재 주문 항목의 수량을 변경하는 함수
+        function changeOrderItemCount(itemName, delta) {
+            currentOrder[itemName] += delta;
+            if (currentOrder[itemName] <= 0) {
+                delete currentOrder[itemName];
+            }
+            renderCurrentOrder();
+        }
+
+        // 주문을 접수하고 저장하는 함수
+        function submitOrder() {
+            const orderItems = Object.entries(currentOrder);
+            const selectedTableNumber = tableNumberSelect.value;
+            
+            if (orderItems.length === 0) {
+                alert('주문할 메뉴를 선택해주세요.');
+                return;
+            }
+            if (!selectedTableNumber) {
+                alert('테이블 번호를 선택해주세요.');
+                return;
+            }
+            
+            if (editingOrderId) {
+                // 기존 주문 수정
+                orders = orders.map(order => {
+                    if (order.id === editingOrderId) {
+                        return { ...order, items: currentOrder, tableNumber: selectedTableNumber };
+                    }
+                    return order;
+                });
+                alert('주문이 성공적으로 수정되었습니다!');
+                editingOrderId = null;
+            } else {
+                // 새로운 주문 접수
+                const newOrder = {
+                    id: Date.now(), // 고유한 주문 ID
+                    tableNumber: selectedTableNumber, // 테이블 번호 추가
+                    items: currentOrder,
+                    timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+                    submissionTime: Date.now(), // 주문 접수 시간 기록
+                    completed: false
+                };
+                
+                orders.unshift(newOrder); // 가장 최근 주문을 맨 앞에 추가
+                showOrderAlert(); // 3분 수정 가능 알림 표시
+                alert('주문이 성공적으로 접수되었습니다!');
+            }
+            
+            localStorage.setItem('orders', JSON.stringify(orders));
+            
+            currentOrder = {}; // 현재 주문 초기화
+            tableNumberSelect.value = ''; // 테이블 번호 선택값 초기화
+            renderCurrentOrder();
+            
+            // 주문 접수 후, 주방 화면도 업데이트
+            if (!kitchenView.classList.contains('hidden')) {
+                renderKitchenOrders();
+            }
+            if (!historyView.classList.contains('hidden')) {
+                renderOrderHistory();
+            }
+        }
+
+        // 3분 수정 가능 알림을 표시하는 함수
+        function showOrderAlert() {
+            alertMessage.classList.remove('hidden', 'alert-exit-active');
+            alertMessage.classList.add('alert-enter-active');
+            setTimeout(() => {
+                alertMessage.classList.remove('alert-enter-active');
+                alertMessage.classList.add('alert-exit-active');
+                setTimeout(() => {
+                    alertMessage.classList.add('hidden');
+                }, 300);
+            }, 5000); // 5초 후 알림 숨기기
+        }
+
+        // 주방 화면에 주문 목록을 렌더링하는 함수
+        function renderKitchenOrders() {
+            const pendingOrders = orders.filter(o => !o.completed);
+            kitchenOrderList.innerHTML = pendingOrders.map(order => `
+                <div id="order-${order.id}" class="bg-gray-100 p-4 rounded-lg shadow-md flex flex-col transition-all duration-300">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-lg font-bold">테이블: ${order.tableNumber}</span>
+                        <span class="text-sm text-gray-500">${order.timestamp}</span>
+                    </div>
+                    <ul class="space-y-1 mb-4">
+                        ${Object.entries(order.items).map(([key, count]) => {
+                            const [name, option] = key.split(' (');
+                            const optionText = option ? `(${option}` : '';
+                            return `
+                                <li class="flex justify-between">
+                                    <span class="text-gray-700">${name} ${optionText}</span>
+                                    <span class="font-semibold text-sm">${count}개</span>
+                                </li>
+                            `;
+                        }).join('')}
+                    </ul>
+                    <button onclick="completeOrder(${order.id})" class="w-full py-2 rounded-lg bg-indigo-500 text-white font-medium hover:bg-indigo-600 transition">
+                        조리 완료
+                    </button>
+                </div>
+            `).join('');
+
+            noKitchenOrders.style.display = pendingOrders.length === 0 ? 'block' : 'none';
+        }
+        
+        // 주문 내역을 렌더링하는 함수
+        function renderOrderHistory() {
+            orderHistoryList.innerHTML = orders.map(order => {
+                // 주문 후 3분 이내인지 확인
+                const isEditable = !order.completed && (Date.now() - order.submissionTime) < (3 * 60 * 1000);
+                const statusClass = order.completed ? 'text-green-600' : 'text-red-500';
+                const statusText = order.completed ? '완료' : '진행 중';
+                
+                return `
+                    <div class="bg-gray-100 p-4 rounded-lg shadow-md flex flex-col">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-lg font-bold">테이블: ${order.tableNumber}</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-500">${order.timestamp}</span>
+                                <span class="text-xs font-semibold px-2 py-1 rounded-full ${order.completed ? 'bg-green-200' : 'bg-red-200'} ${statusClass}">${statusText}</span>
+                            </div>
+                        </div>
+                        <ul class="space-y-1 mb-4">
+                            ${Object.entries(order.items).map(([key, count]) => {
+                                const [name, option] = key.split(' (');
+                                const optionText = option ? `(${option}` : '';
+                                return `
+                                    <li class="flex justify-between">
+                                        <span class="text-gray-700">${name} ${optionText}</span>
+                                        <span class="font-semibold text-sm">${count}개</span>
+                                    </li>
+                                `;
+                            }).join('')}
+                        </ul>
+                        ${isEditable ? `
+                            <button onclick="editOrder(${order.id})" class="w-full py-2 rounded-lg bg-yellow-400 text-white font-medium hover:bg-yellow-500 transition">
+                                수정
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            noHistoryOrders.style.display = orders.length === 0 ? 'block' : 'none';
+        }
+
+        // 주문 수정을 위해 주문을 가져오는 함수
+        function editOrder(orderId) {
+            const orderToEdit = orders.find(order => order.id === orderId);
+            if (!orderToEdit) return;
+
+            editingOrderId = orderId;
+            currentOrder = { ...orderToEdit.items };
+            tableNumberSelect.value = orderToEdit.tableNumber;
+            setActiveTab('order-tab'); // 주문 접수 탭으로 이동
+        }
+
+        // 주문을 완료 처리하는 함수
+        function completeOrder(orderId) {
+            orders = orders.map(order => {
+                if (order.id === orderId) {
+                    return { ...order, completed: true };
+                }
+                return order;
+            });
+            localStorage.setItem('orders', JSON.stringify(orders));
+            // 완료된 주문에 애니메이션 효과를 줍니다
+            const orderElement = document.getElementById(`order-${orderId}`);
+            if (orderElement) {
+                orderElement.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+                setTimeout(() => {
+                    renderKitchenOrders(); // 애니메이션 후 목록 갱신
+                    renderOrderHistory(); // 내역 목록 갱신
+                }, 300);
+            }
+        }
+
+        // 테이블 번호 목록을 화면에 렌더링하는 함수
+        function renderTableNumbers() {
+            tableNumberSelect.innerHTML = `<option value="">-- 테이블을 선택하세요 --</option>` +
+                                         tableNumbers.map(num => `<option value="${num}">${num}번 테이블</option>`).join('');
+        }
+
+        // 이벤트 리스너 등록
+        orderTab.addEventListener('click', () => setActiveTab('order-tab'));
+        historyTab.addEventListener('click', () => setActiveTab('history-tab'));
+        kitchenTab.addEventListener('click', () => setActiveTab('kitchen-tab'));
+        submitOrderBtn.addEventListener('click', submitOrder);
+
+        // 앱 초기화
+        function initApp() {
+            renderMenus();
+            renderTableNumbers();
+            setActiveTab('order-tab');
+            // 5초마다 주방 화면과 주문 내역을 자동으로 새로고침하여 실시간 효과를 줍니다.
+            setInterval(() => {
+                if (!kitchenView.classList.contains('hidden')) {
+                    renderKitchenOrders();
+                }
+                if (!historyView.classList.contains('hidden')) {
+                    renderOrderHistory();
+                }
+            }, 5000);
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
